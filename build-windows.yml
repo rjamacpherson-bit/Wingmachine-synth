@@ -1,0 +1,25 @@
+name: Build Wing Machine VST3 (Windows)
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64
+      - name: Build the plugin and the offline engine test
+        run: cmake --build build --config Release --parallel
+      - name: Engine self-test (renders every creature, season, mode, weather and event; fails on NaN or clipping)
+        run: build\Release\engine_test.exe quick
+      - name: Collect
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item -Recurse "build/WingMachine_artefacts/Release/VST3/Wing Machine.vst3" dist/
+          Compress-Archive -Path "dist/Wing Machine.vst3" -DestinationPath WingMachine-win64-vst3.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WingMachine-win64-vst3
+          path: WingMachine-win64-vst3.zip
